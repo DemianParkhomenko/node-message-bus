@@ -13,7 +13,7 @@ import {
   pushToLastRejectedMessages,
 } from 'Utils';
 import { ChannelWrapper } from 'amqp-connection-manager';
-import { ConsumeMessage } from 'amqplib';
+import { ConfirmChannel, ConsumeMessage } from 'amqplib';
 import { DEFAULT_EXCHANGE_NAME } from './Const';
 import { getDefaultChannel } from './channel';
 import { configureMessageBus, getMessageBusConfig } from './config';
@@ -119,6 +119,7 @@ export async function consumeMessages<Message extends IMessage>(
   handler: MessageHandler<Message>
 ) {
   let prefetch: number | undefined;
+  const channel = await getDefaultChannel();
   if (typeof queueName !== 'string') {
     if (!queueName.queues || queueName.queues.length !== 1) {
       throw new Error(
@@ -131,9 +132,11 @@ export async function consumeMessages<Message extends IMessage>(
     if (prefetchCount) {
       prefetch = prefetchCount;
     }
+    channel.addSetup(async (channel: ConfirmChannel) => {
+      await configureMessageBus(config, channel);
+    });
   }
 
-  const channel = await getDefaultChannel();
   const queue = getMessageBusConfig().queues.find((q) => q.name === queueName);
   const consumerTag = `${
     process.env.HOSTNAME || 'no.env.HOSTNAME'
