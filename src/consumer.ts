@@ -118,9 +118,7 @@ export async function consumeMessages<Message extends IMessage>(
   queueName: ConsumeMessagesConfig | string,
   handler: MessageHandler<Message>
 ) {
-  console.log('📍 consumeMessages', queueName);
   let prefetch: number | undefined;
-  const channel = await getDefaultChannel();
   if (typeof queueName !== 'string') {
     if (!queueName.queues || queueName.queues.length !== 1) {
       throw new Error(
@@ -135,6 +133,7 @@ export async function consumeMessages<Message extends IMessage>(
     }
   }
 
+  const channel = await getDefaultChannel();
   const queue = getMessageBusConfig().queues.find((q) => q.name === queueName);
   const consumerTag = `${
     process.env.HOSTNAME || 'no.env.HOSTNAME'
