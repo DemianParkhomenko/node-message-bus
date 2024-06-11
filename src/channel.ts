@@ -1,6 +1,5 @@
 import { MessageBusConfig } from 'Types';
 import { error, log } from 'Utils';
-import { ConfirmChannel } from 'amqplib';
 import { configureMessageBus, configureMessageBusStatic } from './config';
 import {
   closeMessageBusConnection,
@@ -34,28 +33,29 @@ const channelPromise = getConnection()
   .then((connection) => {
     return connection.createChannel({
       json: true,
-      setup: async (channel: ConfirmChannel) => {
-        log(
-          `Waiting for AMQP to be initialized by invoking initMessageBus() from 'node-message-bus'.`
-        );
-        const config = await _initPromise;
-
-        await configureMessageBus(config, channel);
-
-        log(
-          `AMQP initialization is complete with the following config: ${JSON.stringify(
-            config
-          )}`
-        );
-
-        postInitPromiseResolve(true);
-      },
     });
   })
   .catch((e) => {
     error(e.stack || e);
     throw e;
   });
+
+channelPromise.then(async (channelWrapper) => {
+  log(
+    `Waiting for AMQP to be initialized by invoking initMessageBus() from 'node-message-bus'.`
+  );
+  const config = await _initPromise;
+
+  await configureMessageBus(config, channelWrapper);
+
+  log(
+    `AMQP initialization is complete with the following config: ${JSON.stringify(
+      config
+    )}`
+  );
+
+  postInitPromiseResolve(true);
+});
 
 export const getDefaultChannel = async () => {
   const channel = await channelPromise;

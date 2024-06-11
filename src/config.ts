@@ -69,7 +69,7 @@ export const configureMessageBusStatic = async (
  */
 export const configureMessageBus = async (
   config: MessageBusConfig,
-  channel?: ChannelWrapper | ConfirmChannel
+  channel?: ChannelWrapper
 ) => {
   configureMessageBusStatic(config);
 
@@ -85,9 +85,17 @@ export const configureMessageBus = async (
   )) {
     defaultExchangeConfigured = true;
     try {
-      log(`Asserting exchange "${exchange.name}" of type "${exchange.type}".`);
       promises.push(
-        channel.assertExchange(exchange.name, exchange.type, exchange.options)
+        channel.addSetup(async (channel: ConfirmChannel) => {
+          log(
+            `Asserting exchange "${exchange.name}" of type "${exchange.type}".`
+          );
+          await channel.assertExchange(
+            exchange.name,
+            exchange.type,
+            exchange.options
+          );
+        })
       );
       appliedConfig.exchanges.push(exchange);
     } catch (e) {
@@ -102,8 +110,12 @@ export const configureMessageBus = async (
     DEFAULT_CONFIG.queues || []
   )) {
     try {
-      log(`Asserting queue "${queue.name}".`);
-      promises.push(channel.assertQueue(queue.name, queue.options));
+      promises.push(
+        channel.addSetup(async (channel: ConfirmChannel) => {
+          log(`Asserting queue "${queue.name}".`);
+          await channel.assertQueue(queue.name, queue.options);
+        })
+      );
       appliedConfig.queues.push(queue);
     } catch (e) {
       const message = `Failed to assert queue "${
@@ -118,11 +130,17 @@ export const configureMessageBus = async (
   )) {
     const fromExchange = binding.fromExchange || DEFAULT_EXCHANGE_NAME;
     try {
-      log(
-        `Asserting the queue binding "${fromExchange}" -> "${binding.toQueue}" by key "${binding.routingKey}".`
-      );
       promises.push(
-        channel.bindQueue(binding.toQueue, fromExchange, binding.routingKey)
+        channel.addSetup(async (channel: ConfirmChannel) => {
+          log(
+            `Asserting the queue binding "${fromExchange}" -> "${binding.toQueue}" by key "${binding.routingKey}".`
+          );
+          await channel.bindQueue(
+            binding.toQueue,
+            fromExchange,
+            binding.routingKey
+          );
+        })
       );
       appliedConfig.bindings.push(binding);
     } catch (e) {
